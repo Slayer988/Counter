@@ -1,12 +1,16 @@
 # Counter — Uganda Election Tallying and Visualisation Application (UETVA)
 
-A secure, auditable platform for capturing, verifying, aggregating, releasing and visualising Ugandan election results across all contest types (presidential, parliamentary, SIG, local government, referenda), based on the *UETVA Software Requirements Specification v1.0 (4 Nov 2026)*.
+A secure, auditable platform for capturing, verifying, aggregating, releasing and visualising Ugandan election results across all contest types (presidential, parliamentary, SIG, local government, referenda), based on the *UETVA Software Requirements Specification v1.1 (5 Nov 2026)*.
 
 > **Authority statement.** This software supports the lawful process. It does not declare or certify winners. Declaration and certification remain with the Electoral Commission and other competent authorities. No production use until the EC and legal counsel validate rules, forms and procedures.
 
 ## Status
 
 **Design phase.** No application code yet.
+
+## Requirements
+
+- [SRS v1.1 (Word)](docs/srs/UETVA_SRS_v1.1.docx) · [Markdown](docs/srs/UETVA_SRS_v1.1.md). Changes from v1.0 are listed in its revision history and marked **[v1.1]**.
 
 ## Design documents
 

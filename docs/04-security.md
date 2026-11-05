@@ -31,6 +31,8 @@ Legend: ● allowed within scope · ○ read-only · – none · ⚑ dual contro
 | Manage users / devices | ⚑ grants | – | – | – | – | – | – | – | ○ | – | ● technical | – | ○ |
 | Change result values outside workflow | – | – | – | – | – | – | – | – | – | – | – | – | – |
 
+**[v1.1] Additional roles:** *Sub-county results centre officer* can record custody events (receive, hand over) for envelopes in scope but cannot open envelopes or capture results from them (CUS-003). *Tally-centre display* is a non-interactive device account that renders only the data that centre may show (CUS-006).
+
 The last row is deliberately empty for every role. No role, including database administrators acting through the application, can change result values outside the workflow (§4.1).
 
 ## 3. Segregation-of-duties rules (enforced in code and tested)
@@ -98,4 +100,6 @@ An emergency waiver of SoD-1 (for example, a single officer at a remote tally ce
 | T9 | DDoS on portal | D | Public | CDN static artefacts, WAF, rate limits, isolated from tally | UAT-017 |
 | T10 | Ransomware | D, T | Infra | Segmentation, immutable/offline backups, restore drills | UAT-015 |
 | T11 | Account takeover | S, E | IAM | MFA/WebAuthn, anomaly alerts, short tokens, geo/time-bound grants | IAM-007 |
+| T13 | Envelope substitution or opening before the authorised level | T | Custody | Seal numbers recorded at sealing, checked at each handover; opening rule enforced in software; anomaly exceptions | CUS-002–004 |
+| T14 | Divergence between UETVA and ERTDS figures | T, R | Integrations | Signed exchange files, reconciliation report, no silent overwrite | §10.1 |
 | T12 | Misleading presentation (partial read as final) | — (integrity of information) | Portal | Mandatory status banner, denominator, timestamp, no "winner" wording | §8.6, R-07 |

@@ -15,6 +15,9 @@
 | ADR-009 | RFC 8785 canonical JSON + SHA-256 for all content hashes; Ed25519 for device signatures | Accepted | Deterministic across client and server |
 | ADR-010 | Keycloak as default IdP, federating to an EC IdP if one exists | Proposed | Depends on D-01 |
 | ADR-011 | MapLibre + PMTiles generated per geography version | Accepted | No licensed basemap. Tiles version-pinned to contest geography (VIS-001) |
+| ADR-013 | Model physical chain of custody (envelopes + custody events) separately from result versions; capture from an envelope only at its opening level | Accepted | SRS v1.1 CUS-001–008; reflects the EC rule that envelopes open only at district tally centres |
+| ADR-014 | Treat ERTDS and BVVK as external systems integrated by signed, reconciled import/export, never by direct writes | Proposed | Depends on D-16/D-17 |
+| ADR-015 | Bulk generation of contests and events from versioned templates | Accepted | 45,505 elective positions and 71,214 villages in 2025/2026 (§2.5) |
 | ADR-012 | Percentages computed at display time from integer counts; missing values `null`, never 0 | Accepted | VAL-008, §8.6 |
 
 New ADRs go in `docs/adr/NNN-title.md` using the template: Context → Decision → Consequences → Requirement IDs.
@@ -34,11 +37,17 @@ Design proceeds on the **working assumption** shown. Each item must be confirmed
 | D-07 | Which fields may be published at station / constituency / district / national level, and when? | Station-level public detail **off** by default; enabled per contest by policy (VIS-008) | EC sponsor | 4 | Open |
 | D-08 | Retention, legal hold, data-subject and archival requirements | Retain all result/audit/evidence data until EC records policy; no disposal job enabled | EC records + legal | 3 | Open |
 | D-09 | Hosting, data residency, connectivity, devices and DR | In-country hosting (EC DC or NITA-U), two sites | EC ICT | 1 | Open |
-| D-10 | Actual counts of events, users, submissions, evidence sizes and peak traffic | Sizing model: ~50k events, 10k internal users, 50k concurrent public sessions, ~3 MB evidence/form | EC operations | 5 | Open |
+| D-10 | Actual counts of events, users, submissions, evidence sizes and peak traffic | 2025/2026 baseline: 50,739 polling stations, 71,214 villages, 353 constituencies, 146 districts/cities, 10,717 parishes/wards, 45,505 elective positions, 83,597 candidates, 21.7 M voters; 10k internal users, 50k concurrent public sessions, ~3 MB evidence/form | EC operations | 5 | Open |
 | D-11 | Legal standing of electronic copies, images and signed system records | Electronic artefacts are supporting records only | EC legal | 3 | Open |
 | D-12 | Is independent double entry required, and for which contests or samples? | Required for presidential; sampled (10%) elsewhere | EC operations | 2 | Open |
 | D-13 | May SMS OTP be used for field MFA? | Allowed only for field roles, WebAuthn/TOTP elsewhere | EC ICT security | 1 | Open |
 | D-14 | Is provisional publication permitted before declaration, and with what label? | Allowed with a prominent *Provisional — not an official declaration* banner | EC sponsor + legal | 4 | Open |
+| D-15 | Which local elections use line-up voting vs secret ballot; are EC10/EC11 captured centrally? | LC I chairperson and village women's committees by line-up; captured at sub-county from paper | EC operations + legal | 2 | Open |
+| D-16 | Replace, feed or consume ERTDS? Which figures are authoritative at the national tally centre? | UETVA feeds or consumes ERTDS via signed files; ERTDS stays authoritative for presidential transmission until the EC decides | EC ICT + sponsor | 3 | Open |
+| D-17 | May BVVK scans of DR forms be primary evidence? | Supporting evidence only; tally-centre scan of the opened form is primary | EC legal | 2 | Open |
+| D-18 | Envelope opening, re-sealing and custody rules per level; what counts as a seal anomaly | Open only at district tally centre; any seal-number mismatch is an anomaly | EC operations | 2 | Open |
+| D-19 | Statutory declaration deadlines per contest type | Presidential 48 h from poll close; others configurable | EC legal | 3 | Open |
+| D-20 | What may the tally-centre display show before declaration? | Opened and verified station results for that centre's contests | EC sponsor | 4 | Open |
 
 ## Part C — Implementation phase plan (Appendix E, refined)
 

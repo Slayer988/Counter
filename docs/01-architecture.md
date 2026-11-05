@@ -1,6 +1,6 @@
 # 01 · Architecture Overview
 
-**Traces:** SRS §15.1, §2.4, NFR-001–015, PUB-005, TAL-009, SEC-012, OPS-001–008
+**Traces:** SRS v1.1 §15.1, §2.5, §10.1, CUS-*, §2.4, NFR-001–015, PUB-005, TAL-009, SEC-012, OPS-001–008
 
 ## 1. Architectural drivers
 
@@ -10,6 +10,8 @@
 | Separation of technical and legal state | REL-003/004, TAL-008 | Two independent state machines: *processing state* and *legal status* (see 02) |
 | Intermittent field connectivity | §13, R-04 | Offline-first PWA, signed scoped packages, idempotent store-and-forward (see 05) |
 | Public traffic spikes must not affect tallying | NFR-004, R-05, UAT-017 | Public read path is physically separate and serves only static/cached release artefacts |
+| Very large catalogue: ~50,700 stations, 71,214 villages, ~45,500 elective positions per cycle | §2.5, LIN-004 | Contests and events generated in bulk from templates; partitioning by cycle; queue-based imports |
+| Physical chain of custody (station → sub-county results centre → district tally centre → national) | §3.2, CUS-001–008 | Custody module tracking sealed envelopes; capture allowed only where the envelope may be opened |
 | Every contest can differ | §5, R-01, R-08 | Data-driven rule packs and form templates; no contest-specific code paths |
 | Least privilege and segregation of duties | §4.1, IAM-002/005 | Central policy engine (RBAC + attribute scopes), evaluated server-side on every call |
 
@@ -109,12 +111,26 @@ flowchart TB
 | `exceptions` | Exception lifecycle, corrections, recounts, legal holds | EXC-* |
 | `sync` | Offline packages, sync batches, conflict quarantine | TRN-*, OFF-* |
 | `tally` | Aggregation snapshots, lineage, completeness | TAL-* |
+| `custody` | Result routes, sealed envelopes, custody events, opening rules, tally-centre display mode, declaration deadlines | CUS-* |
+| `integrations` | ERTDS exchange (signed import/export with reconciliation), BVVK scan import as evidence | §10.1 |
 | `release` | Release candidates, gates, approvals, manifests, publish, withdraw | REL-*, Appendix C |
 | `reporting` | Registers, exports (async, expiring), dashboards' read models | §14, §8 |
 | `audit` | Hash-chained audit log, verification endpoint, SIEM export | SEC-006, IAM-007 |
 | `notify` | Task and event notifications with privacy-safe templates | NOT-* |
 
 Modules talk to each other only through service interfaces and domain events (transactional outbox). Only `capture`, `verification`, `exceptions` and `release` may write result state, and only through state-machine transitions.
+
+## 5a. Physical results route (SRS v1.1 §3.2)
+
+```mermaid
+flowchart LR
+  PS[Polling station / village<br/>DR form or EC10 filled, displayed, copies to agents] -- sealed envelope + Report Book --> SC[Sub-county / town / municipal division results centre<br/>receive and hand over only, no opening]
+  SC -- sealed envelope --> DT[District tally centre<br/>Returning Officer opens, captures, verifies, tallies, declares local and parliamentary results]
+  DT -- presidential returns --> NT[National tally centre<br/>presidential aggregation and declaration within 48 h]
+  PS -. optional field capture / BVVK scan .-> DT
+```
+
+Each arrow is a custody event recorded against the envelope's seal number. Capture from a sealed envelope is allowed only at the level configured as its opening point (by default the district tally centre). Field capture at the station and BVVK scans arrive earlier as *unverified advance copies* and are reconciled against the opened envelope; they never replace it. Each tally centre gets a read-only **display mode** for agents, observers and media.
 
 ## 6. Request flow (result capture → public release)
 

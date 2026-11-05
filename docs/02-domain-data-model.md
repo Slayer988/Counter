@@ -1,6 +1,6 @@
 # 02 · Domain and Data Model
 
-**Traces:** SRS §9, §9.1, §5.2, Appendix A, Appendix B, CAP-*, VAL-*, EXC-*, TAL-*, REL-*
+**Traces:** SRS v1.1 §9, §5.3, CUS-*, LIN-*, §9.1, §5.2, Appendix A, Appendix B, CAP-*, VAL-*, EXC-*, TAL-*, REL-*
 
 ## 1. Entity-relationship diagram
 
@@ -20,6 +20,10 @@ erDiagram
   CONTEST_EVENT }o--|| VOTING_EVENT : ""
   VOTING_EVENT }o--|| GEOGRAPHY_NODE : "located in"
   VOTING_EVENT ||--o{ EVENT_LINK : "relocated/split/recount"
+  CONTEST_EVENT ||--o{ ENVELOPE : "sealed returns"
+  ENVELOPE ||--|{ CUSTODY_EVENT : "chain of custody"
+  ENVELOPE ||--o{ EVIDENCE_OBJECT : "DR, ABP, Report Book"
+  CONTEST_TEMPLATE ||--o{ CONTEST : "bulk generated"
   CONTEST ||--o{ ELIGIBILITY_SNAPSHOT : "college/conference (restricted)"
   RESULT ||--|{ RESULT_VERSION : "immutable versions"
   RESULT }o--|| CONTEST_EVENT : "one logical result per contest-event"
@@ -51,7 +55,7 @@ erDiagram
 | `election_cycle`, `election`, `contest` | `config_status` ∈ draft → reviewed → approved → active → superseded → archived (§5.2). Activation is blocked by an `activation_checklist` view listing missing items (ADM-004). |
 | `rule_pack`, `form_template` | `(code, version)` unique. Immutable once `approved` (enforced by trigger). Carries `legal_citation`, `effective_from`, `test_fixtures` (JSON) and approver IDs. A rule pack holds declarative validations and formulas (see §5). |
 | `geography_version` / `geography_node` | Nodes belong to one version. `node_type` comes from a configurable catalogue (region, district, city, county, constituency, subcounty, municipality, division, parish, ward, village). Valid parent→child type pairs are defined per contest hierarchy (GEO-001/002). Geometry is optional `geometry(MultiPolygon, 4326)`. |
-| `voting_event` | `event_type` ∈ POLL_STATION, ELECTORAL_COLLEGE, CONFERENCE, COUNCIL_ASSEMBLY, REFERENDUM_STATION, OTHER. Relocation, split, merge and recount create `event_link` rows; nothing is deleted (GEO-006, EXC-006). |
+| `voting_event` | `event_type` ∈ POLL_STATION, LINE_UP (village line-up vote), ELECTORAL_COLLEGE, CONFERENCE, COUNCIL_ASSEMBLY (incl. ARMY_COUNCIL sub-type), REFERENDUM_STATION, OTHER. Relocation, split, merge and recount create `event_link` rows; nothing is deleted (GEO-006, EXC-006). |
 | `participant` | `kind` ∈ CANDIDATE, INDEPENDENT_CANDIDATE, PARTY, OPTION (CON-002). `contest_participant` holds ballot order, ballot label and nomination status. It is frozen at contest activation (CON-006). |
 | `eligibility_snapshot` | Delegate rosters for colleges and conferences. Stored in a separate `restricted` schema with no grant to reporting or public roles (CON-007/008). |
 | `result` | Logical slot, unique on `(contest_id, contest_event_id)`. Holds a pointer `current_version_id`. |
@@ -59,6 +63,11 @@ erDiagram
 | `result_line` | `(result_version_id, line_code)` where line_code is either `participant:<id>` or a form field code (e.g. `BALLOTS_ISSUED`). Value is `bigint ≥ 0`, with `null` meaning *not provided* (never coerced to 0). |
 | `evidence_object` | `sha256`, `media_type`, `bytes`, `page_no`, `object_key` (WORM bucket), `scan_status` and `quality_flag`. |
 | `aggregation_snapshot` | Contest, level, geography node, `input_set_hash` (hash of sorted input version hashes), `formula_version`, totals JSON, `inclusion_policy` and `completeness` (numerator/denominator). |
+| `contest_template` | Generates contests in bulk for one office type across all qualifying geography nodes (e.g. LC I chairperson × 71,214 villages). Generated contests keep a link to the template version (LIN-004). |
+| `envelope` | One per contest per station/event. Seal number, route, current custodian, `opening_level`, status ∈ SEALED, IN_TRANSIT, RECEIVED, OPENED, ANOMALY (CUS-001–004, CUS-008). |
+| `custody_event` | Append-only: action (SEALED, HANDED_OVER, RECEIVED, SEAL_CHECKED, OPENED, RESEALED), from/to person, location node, seal number observed, time, evidence. A seal mismatch creates an exception. |
+| `evidence_object.doc_type` | DR_FORM, BALLOT_ACCOUNTABILITY_FORM, REPORT_BOOK_ENTRY, EC10, EC11, CONFERENCE_RETURN, OTHER; `source` ∈ FIELD_CAPTURE, TALLY_SCAN, BVVK_IMPORT (CUS-005). |
+| `appointment_record` | Form EC11 executive-committee appointments. Record only; never enters vote aggregation (LIN-002). |
 | `release` | Scope, snapshot IDs, `legal_status_label`, manifest JSON, `manifest_sha256`, `signature`, `published_at` and `supersedes_release_id`. |
 | `audit_event` | Append-only and hash-chained: `hash = sha256(prev_hash ‖ canonical_json(event))`. |
 
@@ -103,6 +112,14 @@ stateDiagram-v2
 The system has no automatic transition into OFFICIALLY_DECLARED or CERTIFIED. Each requires a recorded authority reference, the declaring officer's identity and evidence of the official declaration (TAL-008). The status vocabulary itself is configuration (open decision D-03).
 
 Every transition in both machines writes a `state_transition` row (from, to, actor, reason, approval IDs and time) plus an audit event.
+
+### 3.3 Line-up contests (LIN-001–003)
+
+LINE_UP rule packs have no ballot-accounting fields. The form holds a count per candidate line plus the person declared by the official exactly as written on Form EC10. If the declared person is not the highest count, a blocking exception is raised and nothing is altered. The software still never selects the winner itself.
+
+### 3.4 Advance copies vs opened envelope (CUS-003)
+
+Values from field capture or BVVK scans before the envelope is opened are stored as versions with `source = ADVANCE_COPY` and can feed only the *received* basis. Once the envelope is opened at the authorised level, the captured values are compared against the advance copy and any difference becomes an exception.
 
 ## 4. Immutability and append-only enforcement (EXC-003/005, SEC-006)
 
